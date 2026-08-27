@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// Local dev uses sqlite (zero-setup, see prisma.config.ts). Production is
+// meant to run on Postgres per REQUIREMENTS.md section 6 — switching providers
+// means changing `provider` here, swapping the driver adapter in prisma.config.ts
+// and lib/db.ts, and re-running migrations against the new database.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum AdminRole {
+  FULL_ADMIN
+  FAMILY_ADMIN
+}
+
+enum OutreachChannel {
+  EMAIL
+  SMS
+}
+
+enum OutreachPurpose {
+  ADDRESS_COLLECTION
+  RSVP_REMINDER
+}
+
+enum CashFundStatus {
+  OPEN
+  FULFILLED
+}
+
+// Full Admin (the couple) or Family Admin (e.g. parents) — see REQUIREMENTS.md section 3.
+model Admin {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         AdminRole
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  rsvpAuditLogs    RsvpAuditLog[]
+  registryItems    RegistryItem[]
+  cashFunds        CashFund[]
+}
+
+// Site-wide, single-row settings the admin controls (section 4.9).
+model EventSettings {
+  id                    Int       @id @default(1)
+  weddingDate           DateTime?
+  timezone              String    @default("America/Chicago")
+  rsvpCutoffAt          DateTime?
+  tableLookupEnabled    Boolean   @default(false)
+  registryRevealAt      DateTime?
+  dataRetentionMonths   Int       @default(6)
+  updatedAt             DateTime  @updatedAt
+}
+
+// The unit RSVPs and addresses attach to (section 4.2). Two households can
+// share a surname (e.g. divorced parents) — nothing forces one-per-family.
+model Household {
+  id               String   @id @default(cuid())
+  displayName      String // e.g. "The Smith Family" — admin-set label for list views
+
+  // Contact info: email and/or phone, guest's choice (section 4.3). Phone is
+  // normalized to E.164 on save (section 5).
+  email            String?
+  phone            String?
+
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String?
+
+  notes            String? // allergies/notes free-text (household-level)
+  songRequest      String? // one per household (section 4.5)
+  tableNumber      String? // null = not assigned yet (section 4.6)
+  thankYouSent     Boolean  @default(false)
+
+  rsvpSubmittedAt  DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  guests           Guest[]
+  outreachMessages OutreachMessage[]
+  rsvpAuditLogs    RsvpAuditLog[]
+}
+
+// A named individual within a household — plus-ones/kids are pre-loaded by
+// admin, guests cannot add their own (section 4.4/4.5).
+model Guest {
+  id               String   @id @default(cuid())
+  householdId      String
+  household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  firstName        String
+  lastName         String
+  alias            String? // nickname / maiden name / alt spelling, for lookup matching (section 4.2)
+  relationshipSide String? // e.g. "Bride's side", "Groom's side"
+  isChild          Boolean  @default(false)
+
+  attending        Boolean? // null = no response yet
+  mealChoice       String?
+  dietaryNotes     String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Log of address-collection invites and RSVP reminders sent to a household
+// (section 4.4). Token is stored hashed; the raw token only ever lives in the
+// link sent to the guest.
+model OutreachMessage {
+  id           String          @id @default(cuid())
+  householdId  String
+  household    Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  channel      OutreachChannel
+  purpose      OutreachPurpose
+  tokenHash    String          @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+
+  sentAt       DateTime        @default(now())
+}
+
+// Audit trail for RSVP submissions/edits (section 4.5 trade-off mitigation) —
+// distinguishes guest self-service from admin proxy-entry.
+model RsvpAuditLog {
+  id           String     @id @default(cuid())
+  householdId  String
+  household    Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  submittedBy  String // "guest" or an Admin id
+  admin        Admin?     @relation(fields: [submittedBy], references: [id])
+  summary      String
+
+  createdAt    DateTime   @default(now())
+}
+
+// Scoped, revocable token for the browser extension (section 4.8/5) — grants
+// cash-fund creation only, never full admin access. Stored hashed.
+model ExtensionToken {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  label       String // e.g. "Sarah's laptop" — helps admin identify which to revoke
+
+  createdById String
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+}
+
+// External registry link-out cards (section 4.7).
+model RegistryItem {
+  id         String   @id @default(cuid())
+  title      String
+  url        String
+  logoUrl    String?
+  sortOrder  Int      @default(0)
+
+  createdById String
+  createdBy   Admin   @relation(fields: [createdById], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Couple-managed cash funds, incl. items created via the browser extension
+// (section 4.7/4.8). v1 tracking is manual; see REQUIREMENTS.md section 8 for
+// the planned v2 payment-processing/auto-progress upgrade.
+model CashFund {
+  id               String         @id @default(cuid())
+  title            String
+  description      String?
+  imageUrl         String?
+  sourceUrl        String? // the product page it was created from, if any
+  goalAmountCents  Int?
+  amountRaisedCents Int           @default(0) // admin-updated manually in v1
+  paymentLink      String
+  status           CashFundStatus @default(OPEN)
+
+  createdById      String
+  createdBy        Admin          @relation(fields: [createdById], references: [id])
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
