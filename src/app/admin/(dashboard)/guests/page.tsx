@@ -28,6 +28,12 @@ export default async function GuestsPage() {
             Import CSV
           </Link>
           <Link
+            href="/admin/guests/labels"
+            className="rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            Print Labels
+          </Link>
+          <Link
             href="/admin/guests/new"
             className="rounded bg-gray-900 px-3 py-2 text-sm text-white"
           >
