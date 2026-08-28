@@ -45,6 +45,12 @@ export default async function GuestsPage() {
           >
             Print Labels
           </Link>
+          <Link
+            href="/admin/guests/tables"
+            className="rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            Assign Tables
+          </Link>
           {/* Plain <a>, not <Link>: this is a file download, not a page
               navigation — see the Export CSV note above. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
