@@ -18,7 +18,10 @@ export default async function AdminLayout({
             <Link href="/admin/rsvp">RSVP</Link>
             <Link href="/admin/tables">Tables</Link>
             {admin.role === "FULL_ADMIN" && (
-              <Link href="/admin/settings">Settings</Link>
+              <>
+                <Link href="/admin/registry">Registry</Link>
+                <Link href="/admin/settings">Settings</Link>
+              </>
             )}
           </nav>
           <div className="flex items-center gap-3 text-sm text-gray-500">

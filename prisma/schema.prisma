@@ -35,8 +35,13 @@ enum RsvpAuditSource {
   ADMIN
 }
 
+// RESERVED is a lightweight double-purchase mitigation (REQUIREMENTS.md
+// section 7): admin can mark a fund claimed as soon as they're notified,
+// before formally marking it FULFILLED, so a second guest doesn't buy the
+// same off-registry item in the gap.
 enum CashFundStatus {
   OPEN
+  RESERVED
   FULFILLED
 }
 
