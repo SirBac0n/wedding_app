@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { verifySession } from "@/lib/dal";
 import { prisma } from "@/lib/db";
 import { TableBoard } from "./table-board";
@@ -33,11 +34,15 @@ export default async function TablesPage() {
             Drag a household onto a table. Only attending guests are shown.
           </p>
         </div>
-        {/* Plain <a>, not <Link>: file download, not a page navigation. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/admin/tables/chart" className="rounded border border-gray-300 px-3 py-2 text-sm">
-          Export Chart
-        </a>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/tables/print" className="rounded border border-gray-300 px-3 py-2 text-sm">
+            Print Seating Chart
+          </Link>
+          {/* Plain <a>, not <Link>: file download, not a page navigation. */}
+          <a href="/admin/tables/chart" className="rounded border border-gray-300 px-3 py-2 text-sm">
+            Export Chart (CSV)
+          </a>
+        </div>
       </div>
 
       <TableBoard
