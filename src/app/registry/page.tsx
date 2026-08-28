@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import { isLinkPlatform, PAYMENT_PLATFORM_LABELS } from "@/lib/payment-link";
 
 // Reads live registry/cash-fund data with no other dynamic API call, so it
 // would otherwise get prerendered once at build time (same reasoning as
@@ -84,15 +85,31 @@ export default async function RegistryPage() {
                     <p className="text-sm font-medium text-amber-700">
                       Already claimed by another guest — thank you!
                     </p>
-                  ) : (
+                  ) : isLinkPlatform(fund.paymentPlatform) ? (
                     <a
                       href={fund.paymentLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 self-start rounded bg-gray-900 px-4 py-2 text-sm text-white"
                     >
-                      Contribute
+                      {fund.paymentPlatform === "OTHER"
+                        ? "Contribute"
+                        : `Pay with ${PAYMENT_PLATFORM_LABELS[fund.paymentPlatform]}`}
                     </a>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      Send via Zelle to{" "}
+                      <a
+                        href={
+                          fund.paymentLink.includes("@")
+                            ? `mailto:${fund.paymentLink}`
+                            : `tel:${fund.paymentLink}`
+                        }
+                        className="font-medium underline"
+                      >
+                        {fund.paymentLink}
+                      </a>
+                    </p>
                   )}
                 </div>
               );

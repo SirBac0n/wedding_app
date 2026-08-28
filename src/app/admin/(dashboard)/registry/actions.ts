@@ -4,6 +4,7 @@ import * as z from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireFullAdmin } from "@/lib/dal";
+import { isLinkPlatform } from "@/lib/payment-link";
 
 // FormData.get() returns null (not undefined) for a field that isn't
 // present in the submitted form at all (e.g. amountRaised, which the "add a
@@ -82,16 +83,27 @@ export async function deleteRegistryItem(itemId: string) {
   revalidateRegistry();
 }
 
+const PaymentPlatformSchema = z.enum(["VENMO", "PAYPAL", "CASHAPP", "ZELLE", "OTHER"]);
+
 // Status isn't part of this schema: a new fund always starts OPEN, and only
 // the edit form exposes the status control (see CashFundStatusSchema below).
-const CashFundSchema = z.object({
-  title: z.string().trim().min(1, { error: "Required" }),
-  description: z.string().trim().optional().or(z.literal("")),
-  imageUrl: z.url().trim().optional().or(z.literal("")),
-  goalAmount: z.string().trim().optional().or(z.literal("")),
-  amountRaised: z.string().trim().optional().or(z.literal("")),
-  paymentLink: z.url({ error: "Enter a valid payment link URL" }).trim(),
-});
+// paymentLink is validated as a URL for every platform except ZELLE, which
+// has no public payment link — its "link" is contact info (email/phone),
+// see src/lib/payment-link.ts.
+const CashFundSchema = z
+  .object({
+    title: z.string().trim().min(1, { error: "Required" }),
+    description: z.string().trim().optional().or(z.literal("")),
+    imageUrl: z.url().trim().optional().or(z.literal("")),
+    goalAmount: z.string().trim().optional().or(z.literal("")),
+    amountRaised: z.string().trim().optional().or(z.literal("")),
+    paymentPlatform: PaymentPlatformSchema,
+    paymentLink: z.string().trim().min(1, { error: "Payment link/contact is required" }),
+  })
+  .refine(
+    (data) => !isLinkPlatform(data.paymentPlatform) || /^https?:\/\//i.test(data.paymentLink),
+    { error: "Enter a valid payment link", path: ["paymentLink"] },
+  );
 
 const CashFundStatusSchema = z.enum(["OPEN", "RESERVED", "FULFILLED"]);
 
@@ -103,6 +115,7 @@ export async function createCashFund(formData: FormData) {
     imageUrl: fd(formData, "imageUrl"),
     goalAmount: fd(formData, "goalAmount"),
     amountRaised: fd(formData, "amountRaised"),
+    paymentPlatform: fd(formData, "paymentPlatform"),
     paymentLink: fd(formData, "paymentLink"),
   });
 
@@ -113,6 +126,7 @@ export async function createCashFund(formData: FormData) {
       imageUrl: emptyToNull(parsed.imageUrl),
       goalAmountCents: dollarsToCents(parsed.goalAmount),
       amountRaisedCents: dollarsToCents(parsed.amountRaised) ?? 0,
+      paymentPlatform: parsed.paymentPlatform,
       paymentLink: parsed.paymentLink,
       status: "OPEN",
       createdById: admin.id,
@@ -130,6 +144,7 @@ export async function updateCashFund(fundId: string, formData: FormData) {
     imageUrl: fd(formData, "imageUrl"),
     goalAmount: fd(formData, "goalAmount"),
     amountRaised: fd(formData, "amountRaised"),
+    paymentPlatform: fd(formData, "paymentPlatform"),
     paymentLink: fd(formData, "paymentLink"),
   });
   const status = CashFundStatusSchema.parse(fd(formData, "status"));
@@ -142,6 +157,7 @@ export async function updateCashFund(fundId: string, formData: FormData) {
       imageUrl: emptyToNull(parsed.imageUrl),
       goalAmountCents: dollarsToCents(parsed.goalAmount),
       amountRaisedCents: dollarsToCents(parsed.amountRaised) ?? 0,
+      paymentPlatform: parsed.paymentPlatform,
       paymentLink: parsed.paymentLink,
       status,
     },

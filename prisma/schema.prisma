@@ -45,6 +45,19 @@ enum CashFundStatus {
   FULFILLED
 }
 
+// Drives the payment-link platform picker (admin enters just a
+// handle/cashtag/contact, the app builds the full link) and the
+// public-page rendering — Zelle has no shareable payment URL, so ZELLE
+// funds show paymentLink as contact info (email/phone) rather than a
+// clickable button. See src/lib/payment-link.ts.
+enum PaymentPlatform {
+  VENMO
+  PAYPAL
+  CASHAPP
+  ZELLE
+  OTHER
+}
+
 enum RsvpQuestionType {
   TEXT
   YES_NO
@@ -283,7 +296,8 @@ model CashFund {
   sourceUrl        String? // the product page it was created from, if any
   goalAmountCents  Int?
   amountRaisedCents Int           @default(0) // admin-updated manually in v1
-  paymentLink      String
+  paymentPlatform  PaymentPlatform @default(OTHER)
+  paymentLink      String // full URL for VENMO/PAYPAL/CASHAPP/OTHER; email or phone (not a URL) for ZELLE
   status           CashFundStatus @default(OPEN)
 
   createdById      String

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireFullAdmin } from "@/lib/dal";
 import { ConfirmSubmitButton } from "../guests/confirm-submit-button";
+import { PaymentLinkField } from "./payment-link-field";
 import {
   createRegistryItem,
   updateRegistryItem,
@@ -146,24 +147,18 @@ export default async function RegistryAdminPage() {
                 name="description"
                 defaultValue={fund.description ?? ""}
               />
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <TextInput
-                  id={`fund-imageUrl-${fund.id}`}
-                  label="Image URL (optional)"
-                  name="imageUrl"
-                  type="url"
-                  defaultValue={fund.imageUrl ?? ""}
-                />
-                <TextInput
-                  id={`fund-paymentLink-${fund.id}`}
-                  label="Payment link"
-                  name="paymentLink"
-                  type="url"
-                  defaultValue={fund.paymentLink}
-                  hint="Venmo/PayPal/Zelle/CashApp link"
-                  required
-                />
-              </div>
+              <TextInput
+                id={`fund-imageUrl-${fund.id}`}
+                label="Image URL (optional)"
+                name="imageUrl"
+                type="url"
+                defaultValue={fund.imageUrl ?? ""}
+              />
+              <PaymentLinkField
+                idPrefix={`fund-payment-${fund.id}`}
+                defaultPlatform={fund.paymentPlatform}
+                defaultLink={fund.paymentLink}
+              />
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <TextInput
                   id={`fund-goal-${fund.id}`}
@@ -231,17 +226,8 @@ export default async function RegistryAdminPage() {
               required
             />
             <TextArea id="new-fund-description" label="Description (optional)" name="description" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <TextInput id="new-fund-imageUrl" label="Image URL (optional)" name="imageUrl" type="url" />
-              <TextInput
-                id="new-fund-paymentLink"
-                label="Payment link"
-                name="paymentLink"
-                type="url"
-                hint="Venmo/PayPal/Zelle/CashApp link"
-                required
-              />
-            </div>
+            <TextInput id="new-fund-imageUrl" label="Image URL (optional)" name="imageUrl" type="url" />
+            <PaymentLinkField idPrefix="new-fund-payment" />
             <TextInput
               id="new-fund-goal"
               label="Goal ($, optional)"
