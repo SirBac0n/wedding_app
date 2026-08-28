@@ -14,6 +14,9 @@ export default async function GuestsPage() {
   const missingAddressCount = households.filter(
     (h) => (!h.addressLine1 || !h.city) && (h.email || h.phone),
   ).length;
+  const missingRsvpCount = households.filter(
+    (h) => h.guests.some((g) => g.attending === null) && (h.email || h.phone),
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,7 +54,20 @@ export default async function GuestsPage() {
         </div>
       </div>
 
-      <BulkOutreachButton missingCount={missingAddressCount} />
+      <div className="flex flex-col gap-2">
+        <BulkOutreachButton
+          purpose="ADDRESS_COLLECTION"
+          count={missingAddressCount}
+          label={`Invite ${missingAddressCount} Missing Address${missingAddressCount === 1 ? "" : "es"}`}
+          confirmLabel={`Send an address-collection invite to ${missingAddressCount} household${missingAddressCount === 1 ? "" : "s"} missing an address?`}
+        />
+        <BulkOutreachButton
+          purpose="RSVP_REMINDER"
+          count={missingRsvpCount}
+          label={`Remind ${missingRsvpCount} Household${missingRsvpCount === 1 ? "" : "s"} to RSVP`}
+          confirmLabel={`Send an RSVP reminder to ${missingRsvpCount} household${missingRsvpCount === 1 ? "" : "s"} with at least one guest who hasn't responded?`}
+        />
+      </div>
 
       {households.length === 0 ? (
         <p className="text-gray-500">

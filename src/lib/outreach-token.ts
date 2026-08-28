@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes, createHash } from "node:crypto";
 import { prisma } from "./db";
+import type { OutreachPurpose } from "@generated/prisma/enums";
 
 // Personalized-link tokens for guest outreach (REQUIREMENTS.md section 4.4).
 // Unlike the RSVP "no code to lose" design, this token is generated and sent
@@ -21,6 +22,7 @@ export function hashToken(raw: string): string {
 export type ResolvedInvite = {
   householdId: string;
   greetingName: string;
+  purpose: OutreachPurpose;
 };
 
 // Resolves a raw token from an /invite/[token] link. Not single-use — a
@@ -33,6 +35,7 @@ export async function resolveInviteToken(raw: string): Promise<ResolvedInvite | 
     where: { tokenHash: hash },
     select: {
       expiresAt: true,
+      purpose: true,
       household: {
         select: {
           id: true,
@@ -55,5 +58,6 @@ export async function resolveInviteToken(raw: string): Promise<ResolvedInvite | 
   return {
     householdId: message.household.id,
     greetingName: message.household.guests[0]?.firstName ?? message.household.displayName,
+    purpose: message.purpose,
   };
 }

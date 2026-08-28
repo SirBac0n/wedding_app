@@ -1,13 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { sendBulkAddressOutreach } from "./outreach-actions";
+import { sendBulkOutreach } from "./outreach-actions";
+import type { OutreachPurpose } from "@generated/prisma/enums";
 
-export function BulkOutreachButton({ missingCount }: { missingCount: number }) {
+export function BulkOutreachButton({
+  purpose,
+  count,
+  label,
+  confirmLabel,
+}: {
+  purpose: OutreachPurpose;
+  count: number;
+  label: string;
+  confirmLabel: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
 
-  if (missingCount === 0) return null;
+  if (count === 0) return null;
 
   return (
     <div className="flex items-center gap-3">
@@ -15,24 +26,16 @@ export function BulkOutreachButton({ missingCount }: { missingCount: number }) {
         type="button"
         disabled={pending}
         onClick={() => {
-          if (
-            !window.confirm(
-              `Send an address-collection invite to ${missingCount} household${missingCount === 1 ? "" : "s"} missing an address?`,
-            )
-          ) {
-            return;
-          }
+          if (!window.confirm(confirmLabel)) return;
           setResult(null);
           startTransition(async () => {
-            const res = await sendBulkAddressOutreach();
-            setResult(
-              `Sent ${res.sent}, skipped ${res.skipped} (no contact info on file).`,
-            );
+            const res = await sendBulkOutreach(purpose);
+            setResult(`Sent ${res.sent}, skipped ${res.skipped} (no contact info on file).`);
           });
         }}
         className="rounded border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
       >
-        {pending ? "Sending…" : `Invite ${missingCount} Missing Address${missingCount === 1 ? "" : "es"}`}
+        {pending ? "Sending…" : label}
       </button>
       {result && <span className="text-sm text-gray-500">{result}</span>}
     </div>

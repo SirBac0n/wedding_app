@@ -21,25 +21,31 @@ export function SendInviteButton({
     );
   }
 
+  const send = (purpose: "ADDRESS_COLLECTION" | "RSVP_REMINDER") => {
+    setResult(null);
+    startTransition(async () => {
+      const res = await sendOutreachToHousehold(householdId, purpose);
+      setResult(res.ok ? `Sent via ${res.channel === "EMAIL" ? "email" : "text"}.` : res.error);
+    });
+  };
+
   return (
     <div className="flex items-center gap-3">
       <button
         type="button"
         disabled={pending}
-        onClick={() => {
-          setResult(null);
-          startTransition(async () => {
-            const res = await sendOutreachToHousehold(householdId);
-            setResult(
-              res.ok
-                ? `Sent via ${res.channel === "EMAIL" ? "email" : "text"}.`
-                : res.error,
-            );
-          });
-        }}
+        onClick={() => send("ADDRESS_COLLECTION")}
         className="rounded border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
       >
-        {pending ? "Sending…" : "Send Address-Collection Invite"}
+        {pending ? "Sending…" : "Send Address Invite"}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => send("RSVP_REMINDER")}
+        className="rounded border border-gray-300 px-3 py-2 text-sm disabled:opacity-50"
+      >
+        {pending ? "Sending…" : "Send RSVP Invite"}
       </button>
       {result && <span className="text-sm text-gray-500">{result}</span>}
     </div>

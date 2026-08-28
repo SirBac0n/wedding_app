@@ -30,6 +30,11 @@ enum OutreachPurpose {
   RSVP_REMINDER
 }
 
+enum RsvpAuditSource {
+  GUEST
+  ADMIN
+}
+
 enum CashFundStatus {
   OPEN
   FULFILLED
@@ -143,8 +148,12 @@ model RsvpAuditLog {
   householdId  String
   household    Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  submittedBy  String // "guest" or an Admin id
-  admin        Admin?     @relation(fields: [submittedBy], references: [id])
+  // adminId is only set (and only FK-checked) when source is ADMIN — a guest
+  // submission has no Admin row to point at, so it must be a nullable FK
+  // rather than a required scalar holding a sentinel string like "guest".
+  source       RsvpAuditSource
+  adminId      String?
+  admin        Admin?     @relation(fields: [adminId], references: [id])
   summary      String
 
   createdAt    DateTime   @default(now())

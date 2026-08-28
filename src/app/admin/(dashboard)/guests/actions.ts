@@ -148,7 +148,8 @@ export async function addGuest(householdId: string, formData: FormData) {
   await prisma.rsvpAuditLog.create({
     data: {
       householdId,
-      submittedBy: session.adminId,
+      source: "ADMIN",
+      adminId: session.adminId,
       summary: `Admin added guest ${data.firstName} ${data.lastName}`,
     },
   });
@@ -169,7 +170,8 @@ export async function updateGuest(
   await prisma.rsvpAuditLog.create({
     data: {
       householdId,
-      submittedBy: session.adminId,
+      source: "ADMIN",
+      adminId: session.adminId,
       summary: `Admin updated guest ${data.firstName} ${data.lastName} (proxy-entry, RSVP/details)`,
     },
   });

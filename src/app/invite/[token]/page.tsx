@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { resolveInviteToken } from "@/lib/outreach-token";
 import { AddressFlow } from "../../address/address-flow";
+import { RsvpFlow } from "../../rsvp/rsvp-flow";
 
 export const metadata: Metadata = {
   title: "Find Your Invitation",
@@ -23,24 +24,31 @@ export default async function InvitePage({
     prisma.eventSettings.findUnique({ where: { id: 1 } }),
   ]);
 
+  const contactEmail = settings?.contactEmail ?? null;
+  const title = resolved?.purpose === "RSVP_REMINDER" ? "RSVP" : "Find Your Invitation";
+
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-4 py-12">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold">Find Your Invitation</h1>
+        <h1 className="text-2xl font-semibold">{title}</h1>
         {!resolved && (
           <p className="mt-1 text-sm text-gray-500">
             This link has expired. Enter your name below and we&apos;ll find your invitation.
           </p>
         )}
       </div>
-      <AddressFlow
-        contactEmail={settings?.contactEmail ?? null}
-        initialSelection={
-          resolved
-            ? { householdId: resolved.householdId, greetingName: resolved.greetingName }
-            : undefined
-        }
-      />
+      {resolved?.purpose === "RSVP_REMINDER" ? (
+        <RsvpFlow contactEmail={contactEmail} initialHouseholdId={resolved.householdId} />
+      ) : (
+        <AddressFlow
+          contactEmail={contactEmail}
+          initialSelection={
+            resolved
+              ? { householdId: resolved.householdId, greetingName: resolved.greetingName }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }
