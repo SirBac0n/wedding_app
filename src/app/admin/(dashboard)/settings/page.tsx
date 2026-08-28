@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireFullAdmin } from "@/lib/dal";
 import { updateSettings } from "./actions";
+import { TimezoneField } from "./timezone-field";
 
 function toDateInputValue(d: Date | null | undefined): string {
   if (!d) return "";
@@ -27,13 +28,7 @@ export default async function SettingsPage() {
           type="date"
           defaultValue={toDateInputValue(settings?.weddingDate)}
         />
-        <Field
-          label="Timezone"
-          name="timezone"
-          defaultValue={settings?.timezone ?? "America/Chicago"}
-          required
-          hint="IANA timezone, e.g. America/Chicago"
-        />
+        <TimezoneField defaultValue={settings?.timezone ?? "America/Chicago"} />
         <Field
           label="RSVP cutoff date"
           name="rsvpCutoffAt"

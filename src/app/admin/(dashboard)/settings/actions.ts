@@ -13,6 +13,14 @@ const SettingsSchema = z.object({
   tableLookupEnabled: z.string().optional(),
 });
 
+// FormData.get() returns null (not undefined) for a missing key — notably
+// for unchecked checkboxes, which browsers omit from the submission
+// entirely. Zod's .optional() only accepts undefined, so this read needs
+// the coalesce.
+function fd(formData: FormData, name: string) {
+  return formData.get(name) ?? undefined;
+}
+
 export async function updateSettings(formData: FormData) {
   await requireFullAdmin();
 
@@ -21,7 +29,7 @@ export async function updateSettings(formData: FormData) {
     timezone: formData.get("timezone"),
     rsvpCutoffAt: formData.get("rsvpCutoffAt"),
     contactEmail: formData.get("contactEmail"),
-    tableLookupEnabled: formData.get("tableLookupEnabled"),
+    tableLookupEnabled: fd(formData, "tableLookupEnabled"),
   });
   const tableLookupEnabled = parsed.tableLookupEnabled === "on";
 
