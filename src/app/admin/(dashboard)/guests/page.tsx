@@ -14,12 +14,26 @@ export default async function GuestsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Guest List</h1>
-        <Link
-          href="/admin/guests/new"
-          className="rounded bg-gray-900 px-3 py-2 text-sm text-white"
-        >
-          + Add Household
-        </Link>
+        <div className="flex items-center gap-2">
+          <a
+            href="/admin/guests/export"
+            className="rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            Export CSV
+          </a>
+          <Link
+            href="/admin/guests/import"
+            className="rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            Import CSV
+          </Link>
+          <Link
+            href="/admin/guests/new"
+            className="rounded bg-gray-900 px-3 py-2 text-sm text-white"
+          >
+            + Add Household
+          </Link>
+        </div>
       </div>
 
       {households.length === 0 ? (
