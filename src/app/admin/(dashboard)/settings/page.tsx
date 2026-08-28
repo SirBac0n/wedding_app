@@ -57,7 +57,7 @@ export default async function SettingsPage() {
           />
           Table lookup is live for guests
           <span className="text-xs text-gray-400">
-            (turn on once seating is finalized — see /admin/guests to assign tables)
+            (turn on once seating is finalized — see /admin/tables to assign tables)
           </span>
         </label>
 

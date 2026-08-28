@@ -27,6 +27,7 @@ export default async function HouseholdDetailPage({
     include: {
       guests: { orderBy: { firstName: "asc" } },
       outreachMessages: { orderBy: { sentAt: "desc" }, take: 1 },
+      table: true,
     },
   });
 
@@ -56,6 +57,7 @@ export default async function HouseholdDetailPage({
         </div>
         <HouseholdForm
           household={household}
+          tableLabel={household.table?.label}
           action={boundUpdateHousehold}
           submitLabel="Save Household"
         />

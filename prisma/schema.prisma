@@ -133,6 +133,19 @@ model RsvpAnswer {
   @@unique([questionId, householdId])
 }
 
+// A reception table (section 4.6). A first-class model rather than a free
+// string on Household so empty tables — the ones nobody's assigned to yet —
+// still exist to drag guests onto in the seating-chart board.
+model Table {
+  id        String      @id @default(cuid())
+  label     String // e.g. "1", "Head Table"
+  capacity  Int? // optional; shown as a fill indicator, not enforced
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  households Household[]
+}
+
 // The unit RSVPs and addresses attach to (section 4.2). Two households can
 // share a surname (e.g. divorced parents) — nothing forces one-per-family.
 model Household {
@@ -153,7 +166,8 @@ model Household {
 
   notes            String? // allergies/notes free-text (household-level)
   songRequest      String? // one per household (section 4.5)
-  tableNumber      String? // null = not assigned yet (section 4.6)
+  tableId          String? // null = not assigned yet (section 4.6)
+  table            Table?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
   thankYouSent     Boolean  @default(false)
 
   rsvpSubmittedAt  DateTime?

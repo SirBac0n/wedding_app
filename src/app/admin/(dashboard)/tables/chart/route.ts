@@ -3,26 +3,31 @@ import { verifySession } from "@/lib/dal";
 import { toCsvRow } from "@/lib/csv";
 
 // Table/seating chart export for the venue/caterer (REQUIREMENTS.md section
-// 4.6): one row per household, table number + guest names, sorted by table
-// so it reads like an actual floor plan reference sheet.
+// 4.6): one row per household, table + guest names, sorted by table so it
+// reads like an actual floor plan reference sheet.
 export async function GET() {
   await verifySession();
 
   const households = await prisma.household.findMany({
-    include: { guests: { orderBy: { firstName: "asc" } } },
+    include: {
+      table: true,
+      guests: { where: { attending: true }, orderBy: { firstName: "asc" } },
+    },
   });
 
-  const sorted = households.sort((a, b) => {
-    if (a.tableNumber === b.tableNumber) return a.displayName.localeCompare(b.displayName);
-    if (!a.tableNumber) return 1;
-    if (!b.tableNumber) return -1;
-    return a.tableNumber.localeCompare(b.tableNumber, undefined, { numeric: true });
+  const attending = households.filter((h) => h.guests.length > 0);
+
+  const sorted = attending.sort((a, b) => {
+    const aOrder = a.table?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const bOrder = b.table?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.displayName.localeCompare(b.displayName);
   });
 
   const header = toCsvRow(["Table", "Household", "Guest Names"]);
   const rows = sorted.map((h) =>
     toCsvRow([
-      h.tableNumber ?? "Unassigned",
+      h.table?.label ?? "Unassigned",
       h.displayName,
       h.guests.map((g) => `${g.firstName} ${g.lastName}`).join("; "),
     ]),

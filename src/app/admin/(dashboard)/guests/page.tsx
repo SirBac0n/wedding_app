@@ -8,7 +8,7 @@ export default async function GuestsPage() {
 
   const households = await prisma.household.findMany({
     orderBy: { displayName: "asc" },
-    include: { guests: { orderBy: { firstName: "asc" } } },
+    include: { guests: { orderBy: { firstName: "asc" } }, table: true },
   });
 
   const missingAddressCount = households.filter(
@@ -45,21 +45,6 @@ export default async function GuestsPage() {
           >
             Print Labels
           </Link>
-          <Link
-            href="/admin/guests/tables"
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
-          >
-            Assign Tables
-          </Link>
-          {/* Plain <a>, not <Link>: this is a file download, not a page
-              navigation — see the Export CSV note above. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
-            href="/admin/guests/table-chart"
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
-          >
-            Table Chart
-          </a>
           <Link
             href="/admin/guests/new"
             className="rounded bg-gray-900 px-3 py-2 text-sm text-white"
@@ -129,7 +114,7 @@ export default async function GuestsPage() {
                     <td className="px-4 py-2 text-gray-600">
                       {hasAddress ? `${h.city}, ${h.state ?? ""}` : "—"}
                     </td>
-                    <td className="px-4 py-2 text-gray-600">{h.tableNumber ?? "—"}</td>
+                    <td className="px-4 py-2 text-gray-600">{h.table?.label ?? "—"}</td>
                     <td className="px-4 py-2 text-gray-600">
                       {h.thankYouSent ? "Yes" : "No"}
                     </td>

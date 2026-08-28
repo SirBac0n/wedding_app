@@ -76,7 +76,7 @@ export async function verifyTableIdentity(
 
 export type TableResult = {
   displayName: string;
-  tableNumber: string | null;
+  tableLabel: string | null;
   guestNames: string[];
 };
 
@@ -85,7 +85,7 @@ export async function getTableAssignment(householdId: string): Promise<TableResu
     where: { id: householdId },
     select: {
       displayName: true,
-      tableNumber: true,
+      table: { select: { label: true } },
       guests: { orderBy: { firstName: "asc" }, select: { firstName: true, lastName: true } },
     },
   });
@@ -93,7 +93,7 @@ export async function getTableAssignment(householdId: string): Promise<TableResu
 
   return {
     displayName: household.displayName,
-    tableNumber: household.tableNumber,
+    tableLabel: household.table?.label ?? null,
     guestNames: household.guests.map((g) => `${g.firstName} ${g.lastName}`),
   };
 }

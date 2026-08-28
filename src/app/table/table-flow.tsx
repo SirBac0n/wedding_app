@@ -187,10 +187,10 @@ function TableResultView({
   return (
     <div className="flex flex-col gap-4 text-center">
       <h2 className="text-lg font-medium">{result.guestNames.join(", ")}</h2>
-      {result.tableNumber ? (
+      {result.tableLabel ? (
         <div className="rounded border border-gray-200 bg-white p-6">
           <p className="text-sm text-gray-500">Your table</p>
-          <p className="text-4xl font-semibold">{result.tableNumber}</p>
+          <p className="text-4xl font-semibold">{result.tableLabel}</p>
         </div>
       ) : (
         <p className="text-sm text-gray-500">

@@ -16,6 +16,7 @@ export default async function AdminLayout({
           <nav className="flex items-center gap-4 text-sm font-medium">
             <Link href="/admin/guests">Guests</Link>
             <Link href="/admin/rsvp">RSVP</Link>
+            <Link href="/admin/tables">Tables</Link>
             {admin.role === "FULL_ADMIN" && (
               <Link href="/admin/settings">Settings</Link>
             )}

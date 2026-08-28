@@ -1,11 +1,14 @@
+import Link from "next/link";
 import type { Household } from "@generated/prisma/client";
 
 export function HouseholdForm({
   household,
+  tableLabel,
   action,
   submitLabel,
 }: {
   household?: Household;
+  tableLabel?: string | null;
   action: (formData: FormData) => void;
   submitLabel: string;
 }) {
@@ -30,7 +33,15 @@ export function HouseholdForm({
 
       <Field label="Notes / allergies" name="notes" textarea defaultValue={household?.notes ?? ""} />
       <Field label="Song request" name="songRequest" defaultValue={household?.songRequest ?? ""} />
-      <Field label="Table number" name="tableNumber" defaultValue={household?.tableNumber ?? ""} />
+
+      {household && (
+        <p className="text-sm text-gray-600">
+          Table: {tableLabel ?? "Unassigned"} —{" "}
+          <Link href="/admin/tables" className="underline">
+            manage in Table Assignments
+          </Link>
+        </p>
+      )}
 
       {household && (
         <label className="flex items-center gap-2 text-sm text-gray-700">

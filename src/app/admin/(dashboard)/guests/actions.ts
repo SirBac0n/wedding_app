@@ -19,7 +19,6 @@ const HouseholdSchema = z.object({
   country: z.string().trim().optional().or(z.literal("")),
   notes: z.string().trim().optional().or(z.literal("")),
   songRequest: z.string().trim().optional().or(z.literal("")),
-  tableNumber: z.string().trim().optional().or(z.literal("")),
   thankYouSent: z.string().optional(),
 });
 
@@ -47,7 +46,6 @@ function householdDataFromForm(formData: FormData) {
     country: fd(formData, "country"),
     notes: fd(formData, "notes"),
     songRequest: fd(formData, "songRequest"),
-    tableNumber: fd(formData, "tableNumber"),
     thankYouSent: fd(formData, "thankYouSent"),
   });
 
@@ -67,7 +65,6 @@ function householdDataFromForm(formData: FormData) {
     country: emptyToNull(parsed.country),
     notes: emptyToNull(parsed.notes),
     songRequest: emptyToNull(parsed.songRequest),
-    tableNumber: emptyToNull(parsed.tableNumber),
     thankYouSent: parsed.thankYouSent === "on",
   };
 }
