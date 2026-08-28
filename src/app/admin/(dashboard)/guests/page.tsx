@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { verifySession } from "@/lib/dal";
+import { BulkOutreachButton } from "./bulk-outreach-button";
 
 export default async function GuestsPage() {
   await verifySession();
@@ -9,6 +10,10 @@ export default async function GuestsPage() {
     orderBy: { displayName: "asc" },
     include: { guests: { orderBy: { firstName: "asc" } } },
   });
+
+  const missingAddressCount = households.filter(
+    (h) => (!h.addressLine1 || !h.city) && (h.email || h.phone),
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,6 +50,8 @@ export default async function GuestsPage() {
           </Link>
         </div>
       </div>
+
+      <BulkOutreachButton missingCount={missingAddressCount} />
 
       {households.length === 0 ? (
         <p className="text-gray-500">
@@ -83,7 +90,9 @@ export default async function GuestsPage() {
                             .join(", ")}
                     </td>
                     <td className="px-4 py-2 text-gray-600">
-                      {h.email || h.phone || "—"}
+                      {h.email || h.phone || (
+                        <span className="text-amber-700">No contact info</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-gray-600">
                       {hasAddress ? `${h.city}, ${h.state ?? ""}` : "—"}

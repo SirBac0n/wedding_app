@@ -9,9 +9,15 @@ import { checkRateLimit, getClientKey } from "@/lib/rate-limit";
 // Deliberately minimal-disclosure: search only ever returns the matched
 // guest's own name + side, never the rest of their household or a browsable
 // list — see the trade-off note in section 4.5 that this design leans on.
+//
+// Household-scoped throughout (not guest-scoped): the address itself belongs
+// to the household, and a personalized outreach link (section 4.4) already
+// knows the household directly without a name search — a single model keeps
+// the search-confirmed and link-confirmed paths consistent.
 
 export type GuestMatch = {
   guestId: string;
+  householdId: string;
   firstName: string;
   lastName: string;
   relationshipSide: string | null;
@@ -53,6 +59,7 @@ export async function searchGuests(
   const guests = await prisma.guest.findMany({
     select: {
       id: true,
+      householdId: true,
       firstName: true,
       lastName: true,
       alias: true,
@@ -68,6 +75,7 @@ export async function searchGuests(
     .slice(0, 5)
     .map((g) => ({
       guestId: g.id,
+      householdId: g.householdId,
       firstName: g.firstName,
       lastName: g.lastName,
       relationshipSide: g.relationshipSide,
@@ -89,27 +97,22 @@ export type HouseholdInfo = {
 
 // Lets a returning guest see their previously submitted info pre-filled
 // rather than a blank form (section 4.3: "guests can return and edit").
-// Gated behind the same confirmed guestId from a real search match, not a
-// separately guessable endpoint.
-export async function getHouseholdInfo(guestId: string): Promise<HouseholdInfo | null> {
-  const guest = await prisma.guest.findUnique({
-    where: { id: guestId },
+// Gated behind a confirmed householdId from a real search match or a
+// personalized outreach link, not a separately guessable endpoint.
+export async function getHouseholdInfo(householdId: string): Promise<HouseholdInfo | null> {
+  return prisma.household.findUnique({
+    where: { id: householdId },
     select: {
-      household: {
-        select: {
-          email: true,
-          phone: true,
-          addressLine1: true,
-          addressLine2: true,
-          city: true,
-          state: true,
-          postalCode: true,
-          country: true,
-        },
-      },
+      email: true,
+      phone: true,
+      addressLine1: true,
+      addressLine2: true,
+      city: true,
+      state: true,
+      postalCode: true,
+      country: true,
     },
   });
-  return guest?.household ?? null;
 }
 
 const AddressSchema = z
@@ -134,7 +137,7 @@ export type SubmitAddressState =
   | undefined;
 
 export async function submitAddress(
-  guestId: string,
+  householdId: string,
   _prevState: SubmitAddressState,
   formData: FormData,
 ): Promise<SubmitAddressState> {
@@ -150,11 +153,11 @@ export async function submitAddress(
     };
   }
 
-  const guest = await prisma.guest.findUnique({
-    where: { id: guestId },
-    select: { householdId: true },
+  const household = await prisma.household.findUnique({
+    where: { id: householdId },
+    select: { id: true },
   });
-  if (!guest) {
+  if (!household) {
     return { ok: false, error: "We couldn't find that invitation. Please search again." };
   }
 
@@ -177,7 +180,7 @@ export async function submitAddress(
     parsed.data;
 
   await prisma.household.update({
-    where: { id: guest.householdId },
+    where: { id: household.id },
     data: {
       email: email || undefined,
       phone: phone ? (normalizePhone(phone) ?? undefined) : undefined,

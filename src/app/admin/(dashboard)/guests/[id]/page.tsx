@@ -5,6 +5,7 @@ import { HouseholdForm } from "../household-form";
 import { GuestRow } from "../guest-row";
 import { AddGuestForm } from "../add-guest-form";
 import { ConfirmSubmitButton } from "../confirm-submit-button";
+import { SendInviteButton } from "../send-invite-button";
 import {
   updateHousehold,
   deleteHousehold,
@@ -23,12 +24,17 @@ export default async function HouseholdDetailPage({
 
   const household = await prisma.household.findUnique({
     where: { id },
-    include: { guests: { orderBy: { firstName: "asc" } } },
+    include: {
+      guests: { orderBy: { firstName: "asc" } },
+      outreachMessages: { orderBy: { sentAt: "desc" }, take: 1 },
+    },
   });
 
   if (!household) {
     notFound();
   }
+
+  const lastOutreach = household.outreachMessages[0];
 
   const boundUpdateHousehold = updateHousehold.bind(null, household.id);
   const boundDeleteHousehold = deleteHousehold.bind(null, household.id);
@@ -53,6 +59,21 @@ export default async function HouseholdDetailPage({
           action={boundUpdateHousehold}
           submitLabel="Save Household"
         />
+      </div>
+
+      <div className="flex flex-col gap-3 rounded border border-gray-200 bg-white p-4">
+        <h2 className="text-sm font-medium text-gray-700">Guest Outreach</h2>
+        <SendInviteButton
+          householdId={household.id}
+          hasContact={Boolean(household.email || household.phone)}
+        />
+        {lastOutreach && (
+          <p className="text-xs text-gray-400">
+            Last sent {lastOutreach.sentAt.toLocaleDateString()} via{" "}
+            {lastOutreach.channel === "EMAIL" ? "email" : "text"}
+            {lastOutreach.usedAt && " · opened"}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

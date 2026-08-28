@@ -11,29 +11,37 @@ import {
   type SubmitAddressState,
 } from "./actions";
 
-export function AddressFlow({ contactEmail }: { contactEmail: string | null }) {
-  const [selected, setSelected] = useState<GuestMatch | null>(null);
+type Selection = { householdId: string; greetingName: string };
+
+export function AddressFlow({
+  contactEmail,
+  initialSelection,
+}: {
+  contactEmail: string | null;
+  // Set when arriving via a personalized outreach link (section 4.4) — skips
+  // the search step entirely since the household is already known.
+  initialSelection?: Selection;
+}) {
+  const [selected, setSelected] = useState<Selection | null>(initialSelection ?? null);
 
   if (selected) {
     return (
       <AddressForm
-        guest={selected}
-        onBack={() => setSelected(null)}
+        selection={selected}
+        onBack={initialSelection ? undefined : () => setSelected(null)}
         contactEmail={contactEmail}
       />
     );
   }
 
-  return (
-    <SearchStep onSelect={setSelected} contactEmail={contactEmail} />
-  );
+  return <SearchStep onSelect={setSelected} contactEmail={contactEmail} />;
 }
 
 function SearchStep({
   onSelect,
   contactEmail,
 }: {
-  onSelect: (g: GuestMatch) => void;
+  onSelect: (s: Selection) => void;
   contactEmail: string | null;
 }) {
   const [state, formAction, pending] = useActionState<SearchState, FormData>(
@@ -78,11 +86,13 @@ function SearchStep({
       {state?.ok && state.matches.length > 0 && (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-gray-600">Is one of these you?</p>
-          {state.matches.map((m) => (
+          {state.matches.map((m: GuestMatch) => (
             <button
               key={m.guestId}
               type="button"
-              onClick={() => onSelect(m)}
+              onClick={() =>
+                onSelect({ householdId: m.householdId, greetingName: m.firstName })
+              }
               className="rounded border border-gray-300 px-4 py-3 text-left hover:bg-gray-50"
             >
               <div className="font-medium">
@@ -123,15 +133,15 @@ function NotFoundHelp({
 }
 
 function AddressForm({
-  guest,
+  selection,
   onBack,
   contactEmail,
 }: {
-  guest: GuestMatch;
-  onBack: () => void;
+  selection: Selection;
+  onBack?: () => void;
   contactEmail: string | null;
 }) {
-  const boundAction = submitAddress.bind(null, guest.guestId);
+  const boundAction = submitAddress.bind(null, selection.householdId);
   const [state, formAction, pending] = useActionState<SubmitAddressState, FormData>(
     boundAction,
     undefined,
@@ -140,18 +150,18 @@ function AddressForm({
 
   useEffect(() => {
     let cancelled = false;
-    getHouseholdInfo(guest.guestId).then((info) => {
+    getHouseholdInfo(selection.householdId).then((info) => {
       if (!cancelled) setExisting(info);
     });
     return () => {
       cancelled = true;
     };
-  }, [guest.guestId]);
+  }, [selection.householdId]);
 
   if (state?.ok) {
     return (
       <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Thanks, {guest.firstName}!</h2>
+        <h2 className="text-lg font-medium">Thanks, {selection.greetingName}!</h2>
         <p className="text-sm text-gray-600">
           We&apos;ve saved your address. You can come back and update it anytime by
           searching your name again.
@@ -163,11 +173,13 @@ function AddressForm({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <button type="button" onClick={onBack} className="text-sm text-gray-500 underline">
-          ← Not {guest.firstName}?
-        </button>
+        {onBack && (
+          <button type="button" onClick={onBack} className="text-sm text-gray-500 underline">
+            ← Not {selection.greetingName}?
+          </button>
+        )}
         <h2 className="mt-2 text-lg font-medium">
-          Confirm your mailing address, {guest.firstName}
+          Confirm your mailing address, {selection.greetingName}
         </h2>
         <p className="text-sm text-gray-500">
           Used to send your invitation — we&apos;ll never share it.
