@@ -45,7 +45,7 @@ export function LabelSheet({ households }: { households: LabelHousehold[] }) {
           />
         </div>
         <p className="pb-1 text-sm text-gray-500">
-          (1 = top-left. Use this to finish off a sheet that's already partly used.)
+          (1 = top-left. Use this to finish off a sheet that&apos;s already partly used.)
         </p>
         <button
           type="button"

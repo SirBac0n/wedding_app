@@ -15,6 +15,9 @@ export default async function AdminLayout({
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <nav className="flex items-center gap-4 text-sm font-medium">
             <Link href="/admin/guests">Guests</Link>
+            {admin.role === "FULL_ADMIN" && (
+              <Link href="/admin/settings">Settings</Link>
+            )}
           </nav>
           <div className="flex items-center gap-3 text-sm text-gray-500">
             <span>

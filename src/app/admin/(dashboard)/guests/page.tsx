@@ -15,6 +15,10 @@ export default async function GuestsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Guest List</h1>
         <div className="flex items-center gap-2">
+          {/* Plain <a>, not <Link>: this is a file download, not a page
+              navigation — Link's prefetching would trigger the CSV
+              generation route on hover/viewport-enter. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/admin/guests/export"
             className="rounded border border-gray-300 px-3 py-2 text-sm"

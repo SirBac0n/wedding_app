@@ -59,6 +59,9 @@ model EventSettings {
   tableLookupEnabled    Boolean   @default(false)
   registryRevealAt      DateTime?
   dataRetentionMonths   Int       @default(6)
+  // Fallback contact shown when a guest can't find their name in the address
+  // collection / RSVP lookup (REQUIREMENTS.md section 4.3).
+  contactEmail          String?
   updatedAt             DateTime  @updatedAt
 }
 
