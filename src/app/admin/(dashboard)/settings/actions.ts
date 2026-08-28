@@ -10,6 +10,7 @@ const SettingsSchema = z.object({
   timezone: z.string().trim().min(1, { error: "Required" }),
   rsvpCutoffAt: z.string().optional().or(z.literal("")),
   contactEmail: z.email().trim().optional().or(z.literal("")),
+  tableLookupEnabled: z.string().optional(),
 });
 
 export async function updateSettings(formData: FormData) {
@@ -20,7 +21,9 @@ export async function updateSettings(formData: FormData) {
     timezone: formData.get("timezone"),
     rsvpCutoffAt: formData.get("rsvpCutoffAt"),
     contactEmail: formData.get("contactEmail"),
+    tableLookupEnabled: formData.get("tableLookupEnabled"),
   });
+  const tableLookupEnabled = parsed.tableLookupEnabled === "on";
 
   await prisma.eventSettings.upsert({
     where: { id: 1 },
@@ -30,14 +33,18 @@ export async function updateSettings(formData: FormData) {
       timezone: parsed.timezone,
       rsvpCutoffAt: parsed.rsvpCutoffAt ? new Date(parsed.rsvpCutoffAt) : null,
       contactEmail: parsed.contactEmail || null,
+      tableLookupEnabled,
     },
     update: {
       weddingDate: parsed.weddingDate ? new Date(parsed.weddingDate) : null,
       timezone: parsed.timezone,
       rsvpCutoffAt: parsed.rsvpCutoffAt ? new Date(parsed.rsvpCutoffAt) : null,
       contactEmail: parsed.contactEmail || null,
+      tableLookupEnabled,
     },
   });
 
   revalidatePath("/admin/settings");
+  revalidatePath("/table");
+  revalidatePath("/");
 }

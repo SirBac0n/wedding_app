@@ -49,6 +49,18 @@ export default async function SettingsPage() {
           hint="Shown to guests who can't find their name in the lookup"
         />
 
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="tableLookupEnabled"
+            defaultChecked={settings?.tableLookupEnabled ?? false}
+          />
+          Table lookup is live for guests
+          <span className="text-xs text-gray-400">
+            (turn on once seating is finalized — see /admin/guests to assign tables)
+          </span>
+        </label>
+
         <button
           type="submit"
           className="self-start rounded bg-gray-900 px-4 py-2 text-sm text-white"

@@ -45,6 +45,15 @@ export default async function GuestsPage() {
           >
             Print Labels
           </Link>
+          {/* Plain <a>, not <Link>: this is a file download, not a page
+              navigation — see the Export CSV note above. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            href="/admin/guests/table-chart"
+            className="rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            Table Chart
+          </a>
           <Link
             href="/admin/guests/new"
             className="rounded bg-gray-900 px-3 py-2 text-sm text-white"
@@ -82,6 +91,7 @@ export default async function GuestsPage() {
                 <th className="px-4 py-2">Guests</th>
                 <th className="px-4 py-2">Contact</th>
                 <th className="px-4 py-2">Address</th>
+                <th className="px-4 py-2">Table</th>
                 <th className="px-4 py-2">Thank-you sent</th>
               </tr>
             </thead>
@@ -113,6 +123,7 @@ export default async function GuestsPage() {
                     <td className="px-4 py-2 text-gray-600">
                       {hasAddress ? `${h.city}, ${h.state ?? ""}` : "—"}
                     </td>
+                    <td className="px-4 py-2 text-gray-600">{h.tableNumber ?? "—"}</td>
                     <td className="px-4 py-2 text-gray-600">
                       {h.thankYouSent ? "Yes" : "No"}
                     </td>

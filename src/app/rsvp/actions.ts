@@ -2,9 +2,9 @@
 
 import * as z from "zod";
 import { prisma } from "@/lib/db";
-import { lastFourDigits } from "@/lib/phone";
 import { checkRateLimit, getClientKey } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/outreach/send";
+import { findHouseholdIdsByName, verifyHouseholdByNameAndContact } from "@/lib/household-lookup";
 
 // Public guest-facing RSVP (REQUIREMENTS.md section 4.5). Stricter than
 // address collection (4.3): RSVP data (attendance, meal, dietary) is more
@@ -16,25 +16,6 @@ import { sendEmail } from "@/lib/outreach/send";
 async function getRsvpCutoff(): Promise<Date | null> {
   const settings = await prisma.eventSettings.findUnique({ where: { id: 1 } });
   return settings?.rsvpCutoffAt ?? null;
-}
-
-function tokenize(name: string): string[] {
-  return name.toLowerCase().split(/\s+/).filter(Boolean);
-}
-
-async function findHouseholdIdsByName(name: string): Promise<string[]> {
-  const words = tokenize(name);
-  const guests = await prisma.guest.findMany({
-    select: { householdId: true, firstName: true, lastName: true, alias: true },
-  });
-  const ids = new Set<string>();
-  for (const g of guests) {
-    const haystack = `${g.firstName} ${g.lastName} ${g.alias ?? ""}`.toLowerCase();
-    if (words.every((w) => haystack.includes(w))) {
-      ids.add(g.householdId);
-    }
-  }
-  return Array.from(ids);
 }
 
 export type RsvpSearchState =
@@ -92,30 +73,15 @@ export async function verifyRsvpIdentity(
     return { ok: false, error: "Too many attempts — please wait a few minutes and try again." };
   }
 
-  const householdIds = await findHouseholdIdsByName(name);
-  if (householdIds.length === 0) {
-    return { ok: false, error: "We couldn't find that name. Please start over." };
-  }
-
-  const households = await prisma.household.findMany({
-    where: { id: { in: householdIds } },
-    select: { id: true, email: true, phone: true },
-  });
-
-  const isEmail = verify.includes("@");
-  const matches = households.filter((h) => {
-    if (isEmail) return h.email?.toLowerCase() === verify.toLowerCase();
-    return h.phone ? lastFourDigits(h.phone) === verify.replace(/\D/g, "") : false;
-  });
-
-  if (matches.length !== 1) {
+  const householdId = await verifyHouseholdByNameAndContact(name, verify);
+  if (!householdId) {
     return {
       ok: false,
       error: "That didn't match our records. Please check it and try again, or use the contact link below.",
     };
   }
 
-  return { ok: true, status: "found", householdId: matches[0].id };
+  return { ok: true, status: "found", householdId };
 }
 
 export type RsvpQuestionAnswer = {
