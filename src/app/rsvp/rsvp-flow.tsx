@@ -403,7 +403,7 @@ function HouseholdDetailsForm({
       )}
       <div className="flex flex-col gap-1">
         <label htmlFor="notes" className="text-sm text-gray-600">
-          Anything else we should know? (allergies, notes)
+          Anything else we should know?
         </label>
         <textarea
           id="notes"
