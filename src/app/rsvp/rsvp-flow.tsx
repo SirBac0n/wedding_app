@@ -11,6 +11,7 @@ import {
   type RsvpSearchState,
   type RsvpHouseholdData,
   type RsvpGuest,
+  type RsvpQuestionAnswer,
 } from "./actions";
 
 export function RsvpFlow({
@@ -219,7 +220,14 @@ function RsvpForm({ householdId, contactEmail }: { householdId: string; contactE
 
       <div className="flex flex-col gap-3">
         {data.guests.map((g) => (
-          <GuestCard key={g.id} householdId={householdId} guest={g} onSaved={refetch} />
+          <GuestCard
+            key={g.id}
+            householdId={householdId}
+            guest={g}
+            mealOptions={data.mealOptions}
+            showDietaryNotes={data.showDietaryNotes}
+            onSaved={refetch}
+          />
         ))}
       </div>
 
@@ -227,6 +235,8 @@ function RsvpForm({ householdId, contactEmail }: { householdId: string; contactE
         householdId={householdId}
         notes={data.notes}
         songRequest={data.songRequest}
+        showSongRequest={data.showSongRequest}
+        householdQuestions={data.householdQuestions}
         onSaved={refetch}
       />
 
@@ -240,10 +250,14 @@ function RsvpForm({ householdId, contactEmail }: { householdId: string; contactE
 function GuestCard({
   householdId,
   guest,
+  mealOptions,
+  showDietaryNotes,
   onSaved,
 }: {
   householdId: string;
   guest: RsvpGuest;
+  mealOptions: string[];
+  showDietaryNotes: boolean;
   onSaved: () => void;
 }) {
   const boundAction = saveGuestRsvp.bind(null, householdId, guest.id);
@@ -297,26 +311,37 @@ function GuestCard({
       </div>
 
       {attending && (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <select
-            name="mealChoice"
-            defaultValue={guest.mealChoice ?? ""}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
-          >
-            <option value="">Select a meal…</option>
-            <option value="Chicken">Chicken</option>
-            <option value="Beef">Beef</option>
-            <option value="Fish">Fish</option>
-            <option value="Vegetarian">Vegetarian</option>
-            <option value="Vegan">Vegan</option>
-            <option value="Kids Meal">Kids Meal</option>
-          </select>
-          <input
-            name="dietaryNotes"
-            defaultValue={guest.dietaryNotes ?? ""}
-            placeholder="Dietary restrictions / allergies"
-            className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
-          />
+        <div className="flex flex-col gap-3">
+          {(mealOptions.length > 0 || showDietaryNotes) && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {mealOptions.length > 0 && (
+                <select
+                  name="mealChoice"
+                  defaultValue={guest.mealChoice ?? ""}
+                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                >
+                  <option value="">Select a meal…</option>
+                  {mealOptions.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {showDietaryNotes && (
+                <input
+                  name="dietaryNotes"
+                  defaultValue={guest.dietaryNotes ?? ""}
+                  placeholder="Dietary restrictions / allergies"
+                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                />
+              )}
+            </div>
+          )}
+
+          {guest.questions.map((q) => (
+            <QuestionField key={q.id} question={q} />
+          ))}
         </div>
       )}
 
@@ -341,11 +366,15 @@ function HouseholdDetailsForm({
   householdId,
   notes,
   songRequest,
+  showSongRequest,
+  householdQuestions,
   onSaved,
 }: {
   householdId: string;
   notes: string | null;
   songRequest: string | null;
+  showSongRequest: boolean;
+  householdQuestions: RsvpQuestionAnswer[];
   onSaved: () => void;
 }) {
   const boundAction = saveHouseholdRsvpDetails.bind(null, householdId);
@@ -359,17 +388,19 @@ function HouseholdDetailsForm({
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded border border-gray-200 bg-white p-4">
       <h3 className="text-sm font-medium text-gray-700">A few more things</h3>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="songRequest" className="text-sm text-gray-600">
-          Song request (optional)
-        </label>
-        <input
-          id="songRequest"
-          name="songRequest"
-          defaultValue={songRequest ?? ""}
-          className="rounded border border-gray-300 px-2 py-1 text-sm"
-        />
-      </div>
+      {showSongRequest && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="songRequest" className="text-sm text-gray-600">
+            Song request (optional)
+          </label>
+          <input
+            id="songRequest"
+            name="songRequest"
+            defaultValue={songRequest ?? ""}
+            className="rounded border border-gray-300 px-2 py-1 text-sm"
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-1">
         <label htmlFor="notes" className="text-sm text-gray-600">
           Anything else we should know? (allergies, notes)
@@ -382,6 +413,9 @@ function HouseholdDetailsForm({
           className="rounded border border-gray-300 px-2 py-1 text-sm"
         />
       </div>
+      {householdQuestions.map((q) => (
+        <QuestionField key={q.id} question={q} />
+      ))}
       {state && !state.ok && (
         <p className="text-sm text-red-600" role="alert">
           {state.error}
@@ -395,6 +429,40 @@ function HouseholdDetailsForm({
         {pending ? "Saving…" : "Save"}
       </button>
     </form>
+  );
+}
+
+function QuestionField({ question }: { question: RsvpQuestionAnswer }) {
+  const name = `q_${question.id}`;
+  if (question.type === "YES_NO") {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-sm text-gray-600">{question.label}</span>
+        <div className="flex gap-4 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="radio" name={name} value="Yes" defaultChecked={question.value === "Yes"} />
+            Yes
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name={name} value="No" defaultChecked={question.value === "No"} />
+            No
+          </label>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={name} className="text-sm text-gray-600">
+        {question.label}
+      </label>
+      <input
+        id={name}
+        name={name}
+        defaultValue={question.value ?? ""}
+        className="rounded border border-gray-300 px-2 py-1 text-sm"
+      />
+    </div>
   );
 }
 

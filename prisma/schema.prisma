@@ -40,6 +40,16 @@ enum CashFundStatus {
   FULFILLED
 }
 
+enum RsvpQuestionType {
+  TEXT
+  YES_NO
+}
+
+enum RsvpQuestionScope {
+  GUEST
+  HOUSEHOLD
+}
+
 // Full Admin (the couple) or Family Admin (e.g. parents) — see REQUIREMENTS.md section 3.
 model Admin {
   id           String    @id @default(cuid())
@@ -67,7 +77,60 @@ model EventSettings {
   // Fallback contact shown when a guest can't find their name in the address
   // collection / RSVP lookup (REQUIREMENTS.md section 4.3).
   contactEmail          String?
+
+  // RSVP form customization (Full Admin only) — show/hide toggles for the
+  // two built-in optional fields. Meal choice itself is hidden automatically
+  // when there are no active MealOption rows, so it doesn't need its own flag.
+  rsvpShowSongRequest   Boolean   @default(true)
+  rsvpShowDietaryNotes  Boolean   @default(true)
+
   updatedAt             DateTime  @updatedAt
+}
+
+// Admin-managed meal choices for the RSVP form. An empty list hides the meal
+// picker entirely rather than needing a separate on/off toggle.
+model MealOption {
+  id        String   @id @default(cuid())
+  label     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// Admin-defined extra RSVP questions beyond the built-in fields, scoped to
+// either each guest or the household as a whole.
+model RsvpQuestion {
+  id        String            @id @default(cuid())
+  label     String
+  type      RsvpQuestionType
+  scope     RsvpQuestionScope
+  sortOrder Int               @default(0)
+  active    Boolean           @default(true) // inactive questions keep past answers but stop being asked
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  answers   RsvpAnswer[]
+}
+
+// One answer to one custom question, for one guest or one household
+// depending on the question's scope — exactly one of guestId/householdId is
+// set, matching the RsvpAuditLog nullable-FK pattern rather than a required
+// scalar that could point nowhere.
+model RsvpAnswer {
+  id          String       @id @default(cuid())
+  questionId  String
+  question    RsvpQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  guestId     String?
+  guest       Guest?       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  householdId String?
+  household   Household?   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  value       String
+
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([questionId, guestId])
+  @@unique([questionId, householdId])
 }
 
 // The unit RSVPs and addresses attach to (section 4.2). Two households can
@@ -101,6 +164,7 @@ model Household {
   guests           Guest[]
   outreachMessages OutreachMessage[]
   rsvpAuditLogs    RsvpAuditLog[]
+  rsvpAnswers      RsvpAnswer[]
 }
 
 // A named individual within a household — plus-ones/kids are pre-loaded by
@@ -122,6 +186,8 @@ model Guest {
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  rsvpAnswers      RsvpAnswer[]
 }
 
 // Log of address-collection invites and RSVP reminders sent to a household

@@ -118,6 +118,13 @@ export async function verifyRsvpIdentity(
   return { ok: true, status: "found", householdId: matches[0].id };
 }
 
+export type RsvpQuestionAnswer = {
+  id: string;
+  label: string;
+  type: "TEXT" | "YES_NO";
+  value: string | null;
+};
+
 export type RsvpGuest = {
   id: string;
   firstName: string;
@@ -125,6 +132,7 @@ export type RsvpGuest = {
   attending: boolean | null;
   mealChoice: string | null;
   dietaryNotes: string | null;
+  questions: RsvpQuestionAnswer[];
 };
 
 export type RsvpHouseholdData = {
@@ -135,10 +143,14 @@ export type RsvpHouseholdData = {
   guests: RsvpGuest[];
   rsvpOpen: boolean;
   cutoffDate: string | null;
+  mealOptions: string[];
+  showSongRequest: boolean;
+  showDietaryNotes: boolean;
+  householdQuestions: RsvpQuestionAnswer[];
 };
 
 export async function getRsvpHouseholdData(householdId: string): Promise<RsvpHouseholdData | null> {
-  const [household, cutoff] = await Promise.all([
+  const [household, cutoff, settings, mealOptions, guestQuestions, householdQuestions] = await Promise.all([
     prisma.household.findUnique({
       where: { id: householdId },
       select: {
@@ -148,11 +160,30 @@ export async function getRsvpHouseholdData(householdId: string): Promise<RsvpHou
         songRequest: true,
         guests: {
           orderBy: { firstName: "asc" },
-          select: { id: true, firstName: true, lastName: true, attending: true, mealChoice: true, dietaryNotes: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            attending: true,
+            mealChoice: true,
+            dietaryNotes: true,
+            rsvpAnswers: { select: { questionId: true, value: true } },
+          },
         },
+        rsvpAnswers: { select: { questionId: true, value: true } },
       },
     }),
     getRsvpCutoff(),
+    prisma.eventSettings.findUnique({ where: { id: 1 } }),
+    prisma.mealOption.findMany({ orderBy: { sortOrder: "asc" }, select: { label: true } }),
+    prisma.rsvpQuestion.findMany({
+      where: { scope: "GUEST", active: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.rsvpQuestion.findMany({
+      where: { scope: "HOUSEHOLD", active: true },
+      orderBy: { sortOrder: "asc" },
+    }),
   ]);
 
   if (!household) return null;
@@ -160,9 +191,35 @@ export async function getRsvpHouseholdData(householdId: string): Promise<RsvpHou
   const rsvpOpen = !cutoff || cutoff.getTime() > Date.now();
 
   return {
-    ...household,
+    displayName: household.displayName,
+    email: household.email,
+    notes: household.notes,
+    songRequest: household.songRequest,
     rsvpOpen,
     cutoffDate: cutoff ? cutoff.toISOString() : null,
+    mealOptions: mealOptions.map((m) => m.label),
+    showSongRequest: settings?.rsvpShowSongRequest ?? true,
+    showDietaryNotes: settings?.rsvpShowDietaryNotes ?? true,
+    householdQuestions: householdQuestions.map((q) => ({
+      id: q.id,
+      label: q.label,
+      type: q.type,
+      value: household.rsvpAnswers.find((a) => a.questionId === q.id)?.value ?? null,
+    })),
+    guests: household.guests.map((g) => ({
+      id: g.id,
+      firstName: g.firstName,
+      lastName: g.lastName,
+      attending: g.attending,
+      mealChoice: g.mealChoice,
+      dietaryNotes: g.dietaryNotes,
+      questions: guestQuestions.map((q) => ({
+        id: q.id,
+        label: q.label,
+        type: q.type,
+        value: g.rsvpAnswers.find((a) => a.questionId === q.id)?.value ?? null,
+      })),
+    })),
   };
 }
 
@@ -172,6 +229,34 @@ async function assertRsvpOpen(): Promise<string | null> {
     return "RSVPs have closed. Please use the contact link below if you need to make a change.";
   }
   return null;
+}
+
+async function saveQuestionAnswers(
+  formData: FormData,
+  scope: "GUEST" | "HOUSEHOLD",
+  target: { guestId?: string; householdId?: string },
+) {
+  const questions = await prisma.rsvpQuestion.findMany({ where: { scope, active: true } });
+  for (const q of questions) {
+    const raw = formData.get(`q_${q.id}`);
+    if (raw === null) continue;
+    const value = String(raw).trim();
+    if (!value) continue;
+
+    if (target.guestId) {
+      await prisma.rsvpAnswer.upsert({
+        where: { questionId_guestId: { questionId: q.id, guestId: target.guestId } },
+        create: { questionId: q.id, guestId: target.guestId, value },
+        update: { value },
+      });
+    } else if (target.householdId) {
+      await prisma.rsvpAnswer.upsert({
+        where: { questionId_householdId: { questionId: q.id, householdId: target.householdId } },
+        create: { questionId: q.id, householdId: target.householdId, value },
+        update: { value },
+      });
+    }
+  }
 }
 
 const GuestRsvpSchema = z.object({
@@ -226,6 +311,8 @@ export async function saveGuestRsvp(
     },
   });
 
+  await saveQuestionAnswers(formData, "GUEST", { guestId });
+
   await prisma.rsvpAuditLog.create({
     data: {
       householdId,
@@ -269,6 +356,8 @@ export async function saveHouseholdRsvpDetails(
       songRequest: parsed.data.songRequest || null,
     },
   });
+
+  await saveQuestionAnswers(formData, "HOUSEHOLD", { householdId });
 
   await prisma.rsvpAuditLog.create({
     data: { householdId, source: "GUEST", summary: "Guest updated household notes/song request" },

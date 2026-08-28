@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { verifySession } from "@/lib/dal";
+import { getCurrentAdmin } from "@/lib/dal";
 import { formatCalendarDate } from "@/lib/date";
 
 export default async function RsvpDashboardPage() {
-  await verifySession();
+  const admin = await getCurrentAdmin();
 
   const [households, settings] = await Promise.all([
     prisma.household.findMany({
@@ -35,15 +35,22 @@ export default async function RsvpDashboardPage() {
     <div className="flex max-w-3xl flex-col gap-8">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">RSVP Dashboard</h1>
-        {settings?.rsvpCutoffAt ? (
-          <p className="text-sm text-gray-500">
-            Cutoff: {formatCalendarDate(settings.rsvpCutoffAt)}
-          </p>
-        ) : (
-          <Link href="/admin/settings" className="text-sm text-amber-700 underline">
-            No RSVP cutoff set
-          </Link>
-        )}
+        <div className="flex items-center gap-4">
+          {admin.role === "FULL_ADMIN" && (
+            <Link href="/admin/rsvp/customize" className="text-sm underline">
+              Customize form
+            </Link>
+          )}
+          {settings?.rsvpCutoffAt ? (
+            <p className="text-sm text-gray-500">
+              Cutoff: {formatCalendarDate(settings.rsvpCutoffAt)}
+            </p>
+          ) : (
+            <Link href="/admin/settings" className="text-sm text-amber-700 underline">
+              No RSVP cutoff set
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
