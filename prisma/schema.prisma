@@ -105,6 +105,21 @@ model EventSettings {
   updatedAt             DateTime  @updatedAt
 }
 
+// Ceremony/reception run-of-show (REQUIREMENTS.md section 4.1, "Event
+// details"). `time` is a zero-padded 24-hour "HH:MM" string rather than a
+// DateTime — it's just a time-of-day for display, not a point in time, so
+// there's no wedding-date duplication or timezone conversion to get wrong,
+// and it sorts correctly as plain text. Full Admin only (content editing).
+model ScheduleItem {
+  id          String   @id @default(cuid())
+  time        String
+  title       String // e.g. "Ceremony", "Cocktail Hour"
+  location    String? // e.g. "Garden Terrace" — useful when it differs from the main venue
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // Admin-managed meal choices for the RSVP form. An empty list hides the meal
 // picker entirely rather than needing a separate on/off toggle.
 model MealOption {

@@ -36,6 +36,12 @@ export default async function Home() {
           </a>
         )}
         <a
+          href="/schedule"
+          className="rounded border border-gray-300 px-4 py-2 text-sm"
+        >
+          Schedule
+        </a>
+        <a
           href="/registry"
           className="rounded border border-gray-300 px-4 py-2 text-sm"
         >

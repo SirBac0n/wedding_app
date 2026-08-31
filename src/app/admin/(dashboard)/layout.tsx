@@ -19,6 +19,7 @@ export default async function AdminLayout({
             <Link href="/admin/tables">Tables</Link>
             {admin.role === "FULL_ADMIN" && (
               <>
+                <Link href="/admin/schedule">Schedule</Link>
                 <Link href="/admin/registry">Registry</Link>
                 <Link href="/admin/settings">Settings</Link>
               </>
